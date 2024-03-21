@@ -4,5 +4,6 @@ So we'll need to do something optimal
 
 Different components that we'll need will be:
 1. Player: who will be the players to participate (we'll let any number of players to participate rather than traditional number 2)
-2. Board: kind of board we are going to play on (n X m)
-3. Game: Once we know the Player and the Board we can host a game using details of Player and Board
+2. Board:  kind of board we are going to play on (n X n)
+3. Move:   Each player will mark their id in the spot they choose to play on, same spot for whole row, col or diagonal wins
+4. Game: Once we know the Player and the Board we can host a game using details of Player and Board
