@@ -1,0 +1,36 @@
+Cache: a cache is a set of key and values that is used to store the values of the previous computation
+
+Functional Requirements:
+1. Needs to be able to store keys and their corresponding values, as well as read delete and update them
+when space is limited.
+
+A cache can have very different type of implementations. So we will use interfaces here so that different classes can have their
+own implementation.
+
+Cache is an interface because depending on the type of storage we use, we may be able to support more operations (getting values on the basis of key added or
+time added). We can also have an update method, but we can also use delete and set to update for now.
+
+possible storage class implementations:
+
+* HashMaps : O(1) element accesses and searches(finds).
+* TreeMap: - O(log n) accesses and searches (finds)
+           - But allows ordering of keys via binary search tree
+* LinkedHashMap: - O(1) element access and finds, more space for doubly linked list of keys
+                 - But allows ordering of keys based on when they were inserted. (each node keeps a reference to next inserted node).
+
+
+
+
+possible eviction policies:
+
+* Random : keep a list of keys and choose a random one every time
+* FIFO - keep a queue of keys and set containing the keys , delete the first element of the queue
+* LIFO - keep a stack of keys and a set containing the keys, delete the top element of stack
+* Least Frequently Used: evict the least frequently used key. Keep some key and count of usuage stats to evict it.
+* Least Recently Used:
+  - remove the least recently used key. Everytime a key is added it is considered as the most recently used.
+  - If we need to evict, find the key that is least recently used.
+  - We need to delete elements from front (normal linked list can do that). But we need to move elements to last as well when
+    they are accessed, so we need to locate the keys in linked list. We will keep map to do that. In order to delete the keys
+    from random locations and update the linked list, we'll need to keep prev and next mapping. That is actually use case of
+    doubly linked list.
