@@ -1,12 +1,13 @@
 package eviction_policy
 
-// Eviction : is a factory of implementations of different eviction policies
-type Eviction struct {
+// EvictionFactory : is a factory of implementations of different eviction policies
+// so we can have n number of concrete implementations for it.
+type EvictionFactory struct {
 	lru *lru
-	// extensible
 }
 
-func newEviction() *Eviction {
-	// method unimplemented
-	return nil
+func newEviction() *EvictionFactory {
+	return &EvictionFactory{
+		lru: newLru(),
+	}
 }

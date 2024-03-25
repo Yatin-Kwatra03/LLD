@@ -6,4 +6,5 @@ type IStorage interface {
 	Get(key string) (string, error)
 	Update(key string, value string) error
 	Delete(key string) error
+	NoOfEntitiesCached() int32
 }

@@ -1,14 +1,37 @@
 package eviction_policy
 
-import "errors"
+import (
+	"errors"
+	"sync"
+)
+
+type node struct {
+	data int
+	next *node
+	last *node
+}
+
+func newNode(data int) *node {
+	return &node{
+		data: data,
+		next: nil,
+		last: nil,
+	}
+}
 
 type lru struct {
-	// add storage entites
+	head          *node
+	tail          *node
+	nodeReference map[string]*node
+	mu            sync.Mutex
 }
 
 func newLru() *lru {
-	// method unimplemented
-	return nil
+	return &lru{
+		head:          nil,
+		tail:          nil,
+		nodeReference: make(map[string]*node),
+	}
 }
 
 var _ IEviction = &lru{}

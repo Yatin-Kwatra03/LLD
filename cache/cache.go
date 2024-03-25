@@ -1,16 +1,14 @@
 package cache
 
+// cache : this cache is a factory and
+// can have n number of concrete implementations
+// for the cache factory
 type cache struct {
-	kwatraCache *kwatraCache
-	// extensible
+	redisCache *redisCache
 }
 
-func newCache() *cache {
-	// method unimplemented
-	return nil
-}
-
-func GetRelevantCache(cacheType string) ICache {
-	// method unimplemented
-	return nil
+func newCache(arg string) *cache {
+	return &cache{
+		redisCache: newRedisCache(arg),
+	}
 }

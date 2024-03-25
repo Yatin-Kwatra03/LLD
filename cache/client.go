@@ -2,7 +2,16 @@ package cache
 
 import "errors"
 
-func GetCacheForUseCase(usecase string) (ICache, error) {
-	// we can have some mapping from this usecase to cache type
-	return nil, errors.New("method unimplemented")
+func GetCache(arg1, arg2 string) (ICache, error) {
+	// all the entities will be initialized based on the arg1
+	// which can represent a useCase based on which internal
+	// entities will be initialized
+	cacheClient := newCache(arg1)
+
+	switch arg2 {
+	case "cache vendor data":
+		return cacheClient.redisCache, nil
+	default:
+		return nil, errors.New("no cache supported for the given parameters")
+	}
 }
