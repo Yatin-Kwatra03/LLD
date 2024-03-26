@@ -12,5 +12,5 @@ func TicTacToeImplementation() {
 }
 
 func CacheImplementation() {
-	// todo: implementation pending for lru eviction policy and redis cache methods
+	// todo: implementation pending for lru eviction policy and its usage / calling part and redis cache methods
 }

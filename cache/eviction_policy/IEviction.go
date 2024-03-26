@@ -5,5 +5,5 @@ package eviction_policy
 type IEviction interface {
 	NotifyGet(key string) error
 	Evict(key string) error
-	GetKeyToEvict(string) (string, error)
+	GetKeyToEvict() (string, error)
 }
