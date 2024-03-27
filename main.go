@@ -1,6 +1,11 @@
 package main
 
-import "github.com/personal-projects/LLD/tictactoe"
+import (
+	"fmt"
+
+	"github.com/personal-projects/LLD/cache_library/cache"
+	"github.com/personal-projects/LLD/tictactoe"
+)
 
 func main() {
 	//TicTacToeImplementation()
@@ -12,5 +17,9 @@ func TicTacToeImplementation() {
 }
 
 func CacheImplementation() {
-	// todo: implementation pending for lru eviction policy and its usage / calling part and redis cache methods
+	cacheStorage, err := cache.GetCache("cache vendor data", "redis cache")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(cacheStorage.CurrentCacheSize())
 }

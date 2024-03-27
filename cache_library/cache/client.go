@@ -9,7 +9,7 @@ func GetCache(arg1, arg2 string) (ICache, error) {
 	cacheClient := newCache(arg1)
 
 	switch arg2 {
-	case "cache vendor data":
+	case "redis cache":
 		return cacheClient.redisCache, nil
 	default:
 		return nil, errors.New("no cache supported for the given parameters")

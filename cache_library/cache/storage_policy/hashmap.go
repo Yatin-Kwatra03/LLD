@@ -18,11 +18,18 @@ var (
 type hashmap struct {
 	db map[string]string
 	mu sync.Mutex
+
+	// - in order to maintain data integrity we'll need some rollback strategy
+	// - so, we'll keep backup of all the data, if any failure happens, we'll revert
+	//   the changes by using the backup data
+	// - If it was a normal database then transactional block would have been a legit use case
+	backUpDb map[string]string
 }
 
 func newHashmap() *hashmap {
 	return &hashmap{
-		db: make(map[string]string),
+		db:       make(map[string]string),
+		backUpDb: make(map[string]string),
 	}
 }
 
@@ -93,4 +100,12 @@ func (s *hashmap) NoOfEntitiesCached() int32 {
 	defer s.mu.Unlock()
 
 	return int32(len(s.db))
+}
+
+func (s *hashmap) RollbackChanges() {
+	s.db = s.backUpDb
+}
+
+func (s *hashmap) UpdateBackUp() {
+	s.backUpDb = s.db
 }

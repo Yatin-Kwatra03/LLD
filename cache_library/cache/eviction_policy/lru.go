@@ -24,13 +24,23 @@ type lru struct {
 	tail          *node
 	nodeReference map[string]*node
 	mu            sync.Mutex
+
+	// in order to maintain data integrity we'll need some rollback strategy
+	// so, we'll keep backup of all the data, if any failure happens, we'll revert
+	// the changes by using the backup data
+	backUpHead          *node
+	backUpTail          *node
+	backUpNodeReference map[string]*node
 }
 
 func newLru() *lru {
 	return &lru{
-		head:          nil,
-		tail:          nil,
-		nodeReference: make(map[string]*node),
+		head:                nil,
+		tail:                nil,
+		nodeReference:       make(map[string]*node),
+		backUpHead:          nil,
+		backUpTail:          nil,
+		backUpNodeReference: make(map[string]*node),
 	}
 }
 
@@ -74,6 +84,18 @@ func (s *lru) NotifyGet(key string) error {
 		return s.addElementToTail(existingEntity)
 	}
 
+}
+
+func (s *lru) RollbackChanges() {
+	s.head = s.backUpHead
+	s.tail = s.backUpTail
+	s.nodeReference = s.backUpNodeReference
+}
+
+func (s *lru) UpdateBackUp() {
+	s.backUpHead = s.head
+	s.backUpTail = s.tail
+	s.backUpNodeReference = s.nodeReference
 }
 
 func (s *lru) Evict(key string) error {
