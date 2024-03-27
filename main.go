@@ -22,4 +22,6 @@ func CacheImplementation() {
 		panic(err)
 	}
 	fmt.Println(cacheStorage.CurrentCacheSize())
+
+	// todo: add strong testing data here
 }
