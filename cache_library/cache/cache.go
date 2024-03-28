@@ -7,8 +7,8 @@ type cache struct {
 	redisCache *redisCache
 }
 
-func newCache(arg string) *cache {
+func newCache(arg string, cacheCapacity int32) *cache {
 	return &cache{
-		redisCache: newRedisCache(arg),
+		redisCache: newRedisCache(arg, cacheCapacity),
 	}
 }

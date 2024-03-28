@@ -8,18 +8,17 @@ import (
 	"github.com/personal-projects/LLD/cache_library/cache/storage_policy"
 )
 
-const (
-	defaultCacheCapacity = 5
-)
-
 type redisCache struct {
 	storagePolicy  storage_policy.IStorage
 	evictionPolicy eviction_policy.IEviction
 	capacity       int32
-	mu             sync.Mutex
+	// makes more sense to use reentrant / recursive locks in our case, but it
+	// is not always advisable to use reentrant locks, as they can lead to
+	// deadlock.
+	mu sync.RWMutex
 }
 
-func newRedisCache(arg string) *redisCache {
+func newRedisCache(arg string, cacheCapacity int32) *redisCache {
 	storageClient, err := storage_policy.GetStorage(arg)
 	if err != nil {
 		panic(fmt.Sprintf("error while initializing storage client : %v", err))
@@ -33,7 +32,7 @@ func newRedisCache(arg string) *redisCache {
 	return &redisCache{
 		storagePolicy:  storageClient,
 		evictionPolicy: evictionClient,
-		capacity:       defaultCacheCapacity,
+		capacity:       cacheCapacity,
 	}
 }
 
@@ -177,11 +176,15 @@ func (s *redisCache) RemainingCacheCapacity() (int32, error) {
 
 func (s *redisCache) freeUpSpaceIfRequired() error {
 	if s.capacity == s.storagePolicy.NoOfEntitiesCached() {
+		fmt.Println("key eviction required")
+
 		// we need to evict a key in order to add current one
 		keyToBeEvicted, err := s.evictionPolicy.GetKeyToEvict()
 		if err != nil {
 			return fmt.Errorf("error while fetching key to be evicted : %w", err)
 		}
+
+		fmt.Println("key to be evicted: ", keyToBeEvicted)
 
 		if err = s.Delete(keyToBeEvicted); err != nil {
 			return fmt.Errorf("error while deleting key : %s : %w", keyToBeEvicted, err)

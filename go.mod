@@ -1,3 +1,3 @@
 module github.com/personal-projects/LLD
 
-go 1.21.7
+go 1.19
