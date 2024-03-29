@@ -2,10 +2,13 @@ package cache
 
 import (
 	"fmt"
-	"sync"
+	"log"
+	"math/rand"
+	"strconv"
 
 	"github.com/personal-projects/LLD/cache_library/cache/eviction_policy"
 	"github.com/personal-projects/LLD/cache_library/cache/storage_policy"
+	"github.com/personal-projects/LLD/cache_library/pkg"
 )
 
 type redisCache struct {
@@ -15,7 +18,12 @@ type redisCache struct {
 	// makes more sense to use reentrant / recursive locks in our case, but it
 	// is not always advisable to use reentrant locks, as they can lead to
 	// deadlock.
-	mu sync.RWMutex
+	// we can keep the locking mechanism at db level as well.
+	// But good to have it on the service level since
+	// based on use case we can handle locking and unlocking accordingly.
+	// Also, if we do at database level, we'll need to do for eviction policy
+	// as well separately. Here we only need to do it at one place.
+	mu *pkg.ReentrantLock
 }
 
 func newRedisCache(arg string, cacheCapacity int32) *redisCache {
@@ -33,17 +41,20 @@ func newRedisCache(arg string, cacheCapacity int32) *redisCache {
 		storagePolicy:  storageClient,
 		evictionPolicy: evictionClient,
 		capacity:       cacheCapacity,
+		mu:             pkg.NewReentrantLock(),
 	}
 }
 
 var _ ICache = &redisCache{}
 
-func (s *redisCache) Set(key string, value string) error {
+func (s *redisCache) Set(key, value string, optionalParams ...string) error {
 	var (
 		err error
 	)
 
-	s.mu.Lock()
+	optionalParams = populateOwnerIdIfRequired(optionalParams)
+	ownerId := getLockOwnerId(optionalParams)
+	s.mu.Lock(ownerId)
 	defer func() {
 		if err != nil {
 			s.RollbackChanges()
@@ -51,10 +62,10 @@ func (s *redisCache) Set(key string, value string) error {
 			s.UpdateBackUp()
 		}
 
-		s.mu.Unlock()
+		s.mu.Unlock(ownerId)
 	}()
 
-	if err = s.freeUpSpaceIfRequired(); err != nil {
+	if err = s.freeUpSpaceIfRequired(optionalParams); err != nil {
 		err = fmt.Errorf("error while freeing up space for the new key : %w", err)
 		return err
 	}
@@ -72,13 +83,15 @@ func (s *redisCache) Set(key string, value string) error {
 	return nil
 }
 
-func (s *redisCache) Get(key string) (string, error) {
+func (s *redisCache) Get(key string, optionalParams ...string) (string, error) {
 	var (
 		val string
 		err error
 	)
 
-	s.mu.Lock()
+	optionalParams = populateOwnerIdIfRequired(optionalParams)
+	ownerId := getLockOwnerId(optionalParams)
+	s.mu.Lock(ownerId)
 	defer func() {
 		if err != nil {
 			s.RollbackChanges()
@@ -86,7 +99,7 @@ func (s *redisCache) Get(key string) (string, error) {
 			s.UpdateBackUp()
 		}
 
-		s.mu.Unlock()
+		s.mu.Unlock(ownerId)
 	}()
 
 	if val, err = s.storagePolicy.Get(key); err != nil {
@@ -102,12 +115,14 @@ func (s *redisCache) Get(key string) (string, error) {
 	return val, nil
 }
 
-func (s *redisCache) Update(key string, value string) error {
+func (s *redisCache) Update(key, value string, optionalParams ...string) error {
 	var (
 		err error
 	)
 
-	s.mu.Lock()
+	optionalParams = populateOwnerIdIfRequired(optionalParams)
+	ownerId := getLockOwnerId(optionalParams)
+	s.mu.Lock(ownerId)
 	defer func() {
 		if err != nil {
 			s.RollbackChanges()
@@ -115,7 +130,7 @@ func (s *redisCache) Update(key string, value string) error {
 			s.UpdateBackUp()
 		}
 
-		s.mu.Unlock()
+		s.mu.Unlock(ownerId)
 	}()
 
 	if err = s.storagePolicy.Update(key, value); err != nil {
@@ -131,12 +146,14 @@ func (s *redisCache) Update(key string, value string) error {
 	return nil
 }
 
-func (s *redisCache) Delete(keyToBeEvicted string) error {
+func (s *redisCache) Delete(keyToBeEvicted string, optionalParams ...string) error {
 	var (
 		err error
 	)
 
-	s.mu.Lock()
+	optionalParams = populateOwnerIdIfRequired(optionalParams)
+	ownerId := getLockOwnerId(optionalParams)
+	s.mu.Lock(ownerId)
 	defer func() {
 		if err != nil {
 			s.RollbackChanges()
@@ -144,7 +161,7 @@ func (s *redisCache) Delete(keyToBeEvicted string) error {
 			s.UpdateBackUp()
 		}
 
-		s.mu.Unlock()
+		s.mu.Unlock(ownerId)
 	}()
 
 	if err = s.storagePolicy.Delete(keyToBeEvicted); err != nil {
@@ -160,23 +177,28 @@ func (s *redisCache) Delete(keyToBeEvicted string) error {
 	return nil
 }
 
-func (s *redisCache) CurrentCacheSize() (int32, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *redisCache) CurrentCacheSize(optionalParams ...string) (int32, error) {
+	optionalParams = populateOwnerIdIfRequired(optionalParams)
+	ownerId := getLockOwnerId(optionalParams)
+	s.mu.Lock(ownerId)
+	defer s.mu.Unlock(ownerId)
 
 	return s.storagePolicy.NoOfEntitiesCached(), nil
 }
 
-func (s *redisCache) RemainingCacheCapacity() (int32, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *redisCache) RemainingCacheCapacity(optionalParams ...string) (int32, error) {
+	optionalParams = populateOwnerIdIfRequired(optionalParams)
+	ownerId := getLockOwnerId(optionalParams)
+	s.mu.Lock(ownerId)
+	defer s.mu.Unlock(ownerId)
 
 	return s.capacity - s.storagePolicy.NoOfEntitiesCached(), nil
 }
 
-func (s *redisCache) freeUpSpaceIfRequired() error {
+func (s *redisCache) freeUpSpaceIfRequired(optionalParams []string) error {
 	if s.capacity == s.storagePolicy.NoOfEntitiesCached() {
-		fmt.Println("key eviction required")
+
+		log.Println("key eviction required")
 
 		// we need to evict a key in order to add current one
 		keyToBeEvicted, err := s.evictionPolicy.GetKeyToEvict()
@@ -184,9 +206,9 @@ func (s *redisCache) freeUpSpaceIfRequired() error {
 			return fmt.Errorf("error while fetching key to be evicted : %w", err)
 		}
 
-		fmt.Println("key to be evicted: ", keyToBeEvicted)
+		log.Println("key to be evicted: ", keyToBeEvicted)
 
-		if err = s.Delete(keyToBeEvicted); err != nil {
+		if err = s.Delete(keyToBeEvicted, optionalParams...); err != nil {
 			return fmt.Errorf("error while deleting key : %s : %w", keyToBeEvicted, err)
 		}
 	}
@@ -201,4 +223,15 @@ func (s *redisCache) RollbackChanges() {
 func (s *redisCache) UpdateBackUp() {
 	s.storagePolicy.UpdateBackUp()
 	s.evictionPolicy.UpdateBackUp()
+}
+
+func populateOwnerIdIfRequired(optionalParams []string) []string {
+	if len(optionalParams) == 0 {
+		optionalParams = []string{strconv.Itoa(rand.Int())}
+	}
+	return optionalParams
+}
+
+func getLockOwnerId(optionalParams []string) string {
+	return optionalParams[0]
 }

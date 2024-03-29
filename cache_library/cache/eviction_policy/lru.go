@@ -2,7 +2,6 @@ package eviction_policy
 
 import (
 	"errors"
-	"sync"
 )
 
 type node struct {
@@ -23,7 +22,6 @@ type lru struct {
 	head          *node
 	tail          *node
 	nodeReference map[string]*node
-	mu            sync.Mutex
 
 	// in order to maintain data integrity we'll need some rollback strategy
 	// so, we'll keep backup of all the data, if any failure happens, we'll revert
@@ -51,9 +49,6 @@ var _ IEviction = &lru{}
 // the cases will be same for eviction, because for eviction policy the current
 // element will become the most recent accessed element.
 func (s *lru) NotifyGet(key string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	existingEntity, ok := s.nodeReference[key]
 	if !ok { // it's a new entity
 		return s.addElementToTail(newNode(key))
@@ -99,9 +94,6 @@ func (s *lru) UpdateBackUp() {
 }
 
 func (s *lru) Evict(key string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	existingEntity, ok := s.nodeReference[key]
 	if !ok {
 		return errors.New("key doesn't exist")
@@ -135,26 +127,10 @@ func (s *lru) Evict(key string) error {
 }
 
 func (s *lru) GetKeyToEvict() (string, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	if len(s.nodeReference) == 0 {
 		return "", errors.New("no key found in record")
 	}
-
-	keyToBeEvicted := s.head.key
-
-	// make new head if possible
-	if s.head.next != nil {
-		s.head = s.head.next
-		s.head.last = nil
-	} else {
-		s.head = nil
-		s.tail = nil
-	}
-	delete(s.nodeReference, keyToBeEvicted)
-
-	return keyToBeEvicted, nil
+	return s.head.key, nil
 }
 
 func (s *lru) addElementToTail(addNode *node) error {
@@ -178,6 +154,9 @@ func (s *lru) addElementToTail(addNode *node) error {
 
 	// update tail
 	s.tail = addNode
+
+	// update in the node reference map
+	s.nodeReference[addNode.key] = addNode
 
 	return nil
 }

@@ -1,6 +1,8 @@
 package pkg
 
-import "sync"
+import (
+	"sync"
+)
 
 // ReentrantLock / Recursive locks: use case for a reentrant lock arises
 // when a function or method needs to acquire a lock multiple times within
@@ -17,7 +19,7 @@ type ReentrantLock struct {
 	count  int
 }
 
-func newReentrantLock() *ReentrantLock {
+func NewReentrantLock() *ReentrantLock {
 	reentrantLock := &ReentrantLock{}
 	reentrantLock.cond = sync.NewCond(&reentrantLock.mu)
 	return reentrantLock
@@ -34,7 +36,6 @@ func (s *ReentrantLock) Lock(ownerId string) {
 
 	// check if the owner is same, we can add a recurive lock
 	if s.owner == ownerId {
-		s.mu.Lock()
 		s.count++
 		return
 	}
@@ -55,9 +56,9 @@ func (s *ReentrantLock) Unlock(ownerId string) {
 		return
 	}
 
-	s.mu.Unlock()
 	s.count--
 	if s.count == 0 {
+		s.mu.Unlock()
 		s.locked = false
 		s.owner = "" // resets the owner
 		// notifies the other waiting goroutines that lock is released

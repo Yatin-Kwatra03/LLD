@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"sync"
 )
 
 var (
@@ -17,7 +16,6 @@ var (
 // on RAM, so very fast access)
 type hashmap struct {
 	db map[string]string
-	mu sync.Mutex
 
 	// - in order to maintain data integrity we'll need some rollback strategy
 	// - so, we'll keep backup of all the data, if any failure happens, we'll revert
@@ -36,9 +34,6 @@ func newHashmap() *hashmap {
 var _ IStorage = &hashmap{}
 
 func (s *hashmap) Set(key string, value string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	if key == "" {
 		return errors.New("key cannot be empty")
 	}
@@ -48,9 +43,6 @@ func (s *hashmap) Set(key string, value string) error {
 }
 
 func (s *hashmap) Get(key string) (string, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	// retrieve value from cache
 	val, ok := s.db[key]
 	if !ok {
@@ -60,9 +52,6 @@ func (s *hashmap) Get(key string) (string, error) {
 }
 
 func (s *hashmap) Update(key string, value string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	// first we should check, does the value even exists in cache
 	oldVal, err := s.Get(key)
 	if err != nil {
@@ -77,9 +66,6 @@ func (s *hashmap) Update(key string, value string) error {
 }
 
 func (s *hashmap) Delete(key string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	// we will check if the key exists in cache or not
 	_, err := s.Get(key)
 	if err != nil {
@@ -96,9 +82,6 @@ func (s *hashmap) Delete(key string) error {
 }
 
 func (s *hashmap) NoOfEntitiesCached() int32 {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	return int32(len(s.db))
 }
 
