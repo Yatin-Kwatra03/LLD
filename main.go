@@ -4,12 +4,18 @@ import (
 	"fmt"
 
 	"github.com/personal-projects/LLD/cache_library/cache"
+	"github.com/personal-projects/LLD/thread_pool"
 	"github.com/personal-projects/LLD/tictactoe"
 )
 
 func main() {
 	//TicTacToeImplementation()
-	CacheImplementation()
+	//CacheImplementation()
+	implementThreadPoolToEfficientlyUseResourcesUnoptimalApproach()
+}
+
+func implementThreadPoolToEfficientlyUseResourcesUnoptimalApproach() {
+	thread_pool.ImplementThreadPoolToEfficientlyUseResourcesUnoptimalApproach()
 }
 
 func TicTacToeImplementation() {
