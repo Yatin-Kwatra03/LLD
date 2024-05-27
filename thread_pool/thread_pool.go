@@ -10,6 +10,7 @@ import (
 const maxThreadLimit = 5
 
 func ImplementThreadPoolToEfficientlyUseResourcesUnoptimalApproach() {
+
 	// Let's say we are getting a number of requests to print a number
 	// we'll try implement it using a thread pool basically limit the
 	// no of threads being spawned / go routines being fired.
